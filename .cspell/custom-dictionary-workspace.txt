@@ -1,0 +1,7 @@
+# Custom Dictionary Words
+higgs
+Histo
+histos
+infn
+xrdcp
+xrootd

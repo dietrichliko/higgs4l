@@ -1,0 +1,74 @@
+---
+- DataFrame: df
+  Histo1D:
+    - name: nMuon
+      title: "# of muons"
+      bins: [11, -0.5, 10.5]
+    - name: Muon_pt
+      title: "p_{T} of all muons"
+      bins: [100, 0., 100.]
+    - name: Muon_eta
+      title: "#eta of all muons"
+      bins: [100, -3., 3.]
+    - name: Muon_phi
+      title: "#phi of all muons"
+      bins: [100, -3.2, 3.2]
+    - name: Muon_mediumPromptId
+      title: Medium promptId of all Muons
+      bins: [3, -0.5, 2.5]
+    - name: Muon_pfRelIso03_all
+      title: PF Rel Iso 0.3 of all Muons
+      bins: [100, -1., 1.]
+    - name: Muon_pdgId
+      title: PDG ID of all Muons
+      bins: [41, -20.5, 20.5]
+    - name: nGoodMuon
+      title: "# of good muons"
+      bins: [11, -0.5, 10.5]
+    - name: nGoodMuon_pos
+      title: "# of good muons positive charge"
+      bins: [11, -0.5, 10.5]
+    - name: nGoodMuon_neg
+      title: "# of good muons negative charge"
+      bins: [11, -0.5, 10.5]
+    - name: GoodMuon_pt
+      title: "p_{T} of good muons"
+      bins: [100, 0., 100.]
+    - name: GoodMuon_eta
+      title: "#eta of good muons"
+      bins: [100, -5., 5.]
+    - name: GoodMuon_phi
+      title: "#phi of good muons"
+      bins: [100, 0., 3.2]
+- DataFrame: df_4mu
+  Histo1D:
+    - name: higgs_mass
+      title: "Higgs Mass"
+      bins: [100, 0., 200.]
+    - name: z_mass
+      title: "Z Mass"
+      bins: [100, 0., 200.]
+    - name: z1_mass
+      title: "Z1 Mass"
+      bins: [100, 0., 200.]
+    - name: z2_mass
+      title: "Z2 Mass"
+      bins: [100, 0., 200.]
+- DataFrame: df_4mu_sel
+  Histo1D:
+    - name: higgs_mass_sel
+      title: "Higgs Mass"
+      bins: [100, 0., 200.]
+      var: higgs_mass
+    - name: z_mass_sel
+      title: "Z Mass"
+      bins: [100, 0., 200.]
+      var: z_mass
+    - name: z1_mass_sel
+      title: "Z1 Mass"
+      bins: [100, 0., 200.]
+      var: z1_mass
+    - name: z2_mass_sel
+      title: "Z2 Mass"
+      bins: [100, 0., 200.]
+      var: z2_mass
