@@ -43,6 +43,8 @@ git clone git@github.com:dietrichliko/higgs4l.git
 An alternative is to setup the full stack in a separate ```conda``` environment. It is 
 suggested to move your private conda environments from the home area to the group area 
 by creating a  corresponding ```.condarc```. Adapt the directory paths to your needs. 
+It is suggested to move your private conda environments from the home area to the group area by creating a 
+corresponding ```.condarc```. Adapt the directory paths to your needs. 
 
 ```text
 auto_activate_base: false
