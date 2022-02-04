@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+#
+# Retrieve file info from CMS DAS
+#
+# Dietrich Liko
 
 import subprocess
 import sys
