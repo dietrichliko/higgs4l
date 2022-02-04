@@ -1,11 +1,16 @@
 #!/usr/bin/env python3
 #
 # Sample analysis of H-> ZZ* -> 4mu
-
+#
+# Based on various examples. Includes prestageing for CLIP
+#
+#
+# Dietrich Liko
 
 import argparse
 import concurrent.futures
 import getpass
+import logging
 import os
 import subprocess
 import time
@@ -13,6 +18,13 @@ from typing import Any, Dict, Generator, List, Tuple
 
 import ROOT  # type: ignore
 import yaml
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s -  %(message)s",
+    datefmt="%y-%m-%d %H:%M:%S",
+)
+log = logging.getLogger(__name__)
 
 MAX_WORKERS = 4
 PATH_STAGE = f"/scratch-cbe/users/{getpass.getuser()}"
@@ -26,25 +38,29 @@ NAMES = [
 ]
 
 
-def all_files(small: bool = False) -> Generator[str, None, None]:
+def all_files(max: int = -1) -> Generator[str, None, None]:
     """Generator for all file names.
 
     Arguments:
-        small: run only on 10 files
+        max: run on max files, negative for all
     """
     cnt = 0
     for name in NAMES:
         with open(name, "r") as inp:
             for line in inp:
                 cnt += 1
-                if small and cnt > 10000:
+                if max > 0 and cnt > max:
                     return
                 else:
                     yield line[:-1]
 
 
 def stage_file(lfn: str) -> str:
+    """Stage a file from EOS to scratch.
 
+    Arguments:
+        lfn: logical file name (/store/... )
+    """
     path = PATH_STAGE + lfn
 
     if not os.path.exists(path):
@@ -63,6 +79,13 @@ def stage_file(lfn: str) -> str:
 
 
 def stage_all_files(small: bool) -> List[str]:
+    """Stage all files by running MAX_WORKERS tasks."""
+
+    if small:
+        max = 10
+        log.info("Only %d files will be staged", max)
+    else:
+        max = -1
 
     all_path = []
     with concurrent.futures.ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
@@ -73,9 +96,10 @@ def stage_all_files(small: bool) -> List[str]:
 
 
 def higgs4mu(df) -> Tuple[Dict[str, Any], Dict[str, Any]]:
-
+    """Analysis H->ZZ*->4mu."""
     counters: Dict[str, Any] = {}
 
+    log.info("Setting up the 4 muon analysis")
     # Good Muons
 
     df = (
@@ -100,6 +124,7 @@ def higgs4mu(df) -> Tuple[Dict[str, Any], Dict[str, Any]]:
         )
     )
 
+    # 4 Muon Events
     df_4mu = (
         df.Filter(
             "nGoodMuon_pos == 2 && nGoodMuon_neg == 2", "Events with 2 lepton pairs"
@@ -132,7 +157,8 @@ def higgs4mu(df) -> Tuple[Dict[str, Any], Dict[str, Any]]:
 
 
 def book_histos(dfs: Dict[str, Any], histos_file: str) -> List[Any]:
-
+    """Book histograms for the dataframes."""
+    log.info("Booking histograms")
     with open(histos_file, "r") as inp:
         defs = yaml.safe_load(inp)
 
@@ -144,9 +170,10 @@ def book_histos(dfs: Dict[str, Any], histos_file: str) -> List[Any]:
             title = h1d.get("title", name)
             bins = h1d.get("bins")
             var = h1d.get("var", name)
-            print(f"{df}: {name}")
+            log.debug(f"Booking %s for %s", name, df)
             histos.append(dfs[df].Histo1D((name, title, *bins), var))
 
+    log.info("Number of histograms: %d", len(histos))
     return histos
 
 
@@ -156,28 +183,44 @@ if __name__ == "__main__":
     ROOT.gROOT.SetBatch(True)
     ROOT.PyConfig.IgnoreCommandLineOptions = True
 
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(
+        description="Sample analysis of H-> ZZ* -> 4mu using Dataframes"
+    )
     parser.add_argument(
         "--small", action="store_true", default=False, help="Run only on 10 files"
+    )
+    parser.add_argument(
+        "--debug", action="store_true", default=False, help="Enable verbose logging"
     )
     parser.add_argument(
         "--threads", type=int, default=0, help="Number of threads (default: 0)"
     )
     parser.add_argument(
-        "-o", "--output", default="doublemuon.root", help="Histogram output (default: doublemuon.root)"
+        "-o",
+        "--output",
+        default="doublemuon.root",
+        help="Histogram output (default: doublemuon.root)",
     )
     parser.add_argument(
-        "--histos", default="doublemuon.histos.yaml", help="Histogram definition (default doublemuon.histos.yaml)"
+        "--histos",
+        default="doublemuon.histos.yaml",
+        help="Histogram definition (default doublemuon.histos.yaml)",
     )
     args = parser.parse_args()
+
+    if args.debug:
+        log.setLevel(logging.DEBUG)
+
+    log.info("Sample analysis of H-> ZZ* -> 4mu using Dataframes")
 
     # enable ROOT multithreading
     if args.threads >= 0:
         ROOT.EnableImplicitMT(args.threads)
+    log.info("ROOT Threadpool size is %d", ROOT.GetThreadPoolSize())
 
     # Load C++
     script_dir = os.path.dirname(os.path.realpath(__file__))
-    ROOT.gInterpreter.Declare(f'#include "{script_dir}/doublemuon.h"')
+    ROOT.gInterpreter.Declare(f'#include "{script_dir}/doublemuon_inc.h"')
 
     # stage all files and create chain
     paths = stage_all_files(args.small)
@@ -188,13 +231,14 @@ if __name__ == "__main__":
     # Dataframe
     df = ROOT.RDataFrame(chain)
 
-    time_start = time.time()
     events = df.Count()
 
     dfs, counters_4mu = higgs4mu(df)
 
     histos = book_histos(dfs, args.histos)
 
+    log.info("Starting analysis")
+    time_start = time.time()
     ROOT.RDF.RunGraphs(list(counters_4mu.values()) + histos)
 
     df.Report().Print()
@@ -208,8 +252,11 @@ if __name__ == "__main__":
 
     rate = events_total / time_total
 
-    print(f"Events: {events.GetValue()} in {time_total:.2} seconds ({rate/1E6:.2f}MHz)")
+    log.info(
+        "Events: %d, Time: %d secs, Rate %.2f MHz", events_total, time_total, rate / 1e6
+    )
 
+    log.info("Writeing 5s", args.output)
     out = ROOT.TFile(args.output, "RECREATE")
     for hist in histos:
         hist.Write()
